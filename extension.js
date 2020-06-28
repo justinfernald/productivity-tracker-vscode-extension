@@ -62,7 +62,7 @@ function activate(context) {
         ];
 
         context.globalState.update("keyData", keyData);
-
+        tempKeyCount = 0;
         updateStatusBar(context, keyData);
     }, 10000);
 
