@@ -21,7 +21,7 @@ function activate(context) {
     let disposable = vscode.commands.registerCommand(
         "productivity-tracker.show",
         () => {
-            vscode.window.showInformationMessage("Productivity Tracker!");
+            // vscode.window.showInformationMessage("Productivity Tracker!");
             const panel = vscode.window.createWebviewPanel(
                 "productivityTracker",
                 "Productivity Tracker",
@@ -37,7 +37,7 @@ function activate(context) {
             );
 
             panel.webview.html = setupWebview(context, panel);
-            console.log(panel.webview.html);
+            // console.log(panel.webview.html);
         }
     );
 
@@ -50,19 +50,21 @@ function activate(context) {
 
     vscode.workspace.onDidChangeTextDocument(() => {
         tempKeyCount++;
+        console.log(tempKeyCount);
     });
 
     setInterval(() => {
-        let keyData = [
-            ...context.globalState.get("keyData"),
-            {
+        let keyData = context.globalState.get("keyData");
+        if (tempKeyCount > 0) {
+            keyData.push({
                 time: Date.now(),
                 keys: tempKeyCount,
-            },
-        ];
+            });
 
-        context.globalState.update("keyData", keyData);
-        tempKeyCount = 0;
+            context.globalState.update("keyData", keyData);
+
+            tempKeyCount = 0;
+        }
         updateStatusBar(context, keyData);
     }, 10000);
 
@@ -71,10 +73,12 @@ function activate(context) {
 
 function updateStatusBar(context, keyData) {
     if (!keyData) keyData = context.globalState.get("keyData");
+    console.log(keyData.length);
     let filtered = keyData
         .filter((dataPoint) => dataPoint.time > Date.now() - 3600000)
         .map((dataPoint) => dataPoint.keys);
-    let sum = filtered.reduce((a, b) => a + b);
+    // console.log(filtered);
+    let sum = filtered.reduce((a, b) => a + b, 0);
     statusBarItem.text = `${sum} Char/Hr`;
     statusBarItem.show();
     return sum;
@@ -86,21 +90,30 @@ function setupWebview(context, panel) {
         (dataPoint) => dataPoint.time > Date.now() - 2592000000
     );
     console.log(filtered);
-    let oneDay = 86400000;
     let newData = [];
-    for (let day = 1; day <= 30; day++) {
-        console.log(day);
+
+    let todayDate = new Date();
+    let startingDate = new Date(
+        new Date(todayDate.toDateString()).setDate(todayDate.getDate() - 30)
+    );
+
+    for (
+        ;
+        startingDate.getTime() <= todayDate.getTime();
+        startingDate = new Date(
+            startingDate.setDate(startingDate.getDate() + 1)
+        )
+    ) {
+        console.log(startingDate);
         let dayFilter = filtered.filter(
             (dataPoint) =>
-                dataPoint.time >
-                    Date.now() - (2592000000 - (day - 1) * oneDay) &&
-                dataPoint.time < Date.now() - (2592000000 - day * oneDay)
+                dataPoint.time > startingDate.getTime() &&
+                startingDate.getTime() > dataPoint.time - 86400000
         );
-        console.log(day);
         let keys = dayFilter.reduce((a, b) => a + b.keys, 0);
         newData.push({
-            day,
-            keys,
+            x: startingDate,
+            y: keys,
         });
     }
 
@@ -139,12 +152,11 @@ function setupWebview(context, panel) {
 
 						// The data for our dataset
 						data: {
-							labels: [${newData.map((dataPoint) => dataPoint.day)}],
 							datasets: [{
 								label: 'Key Time Dataset',
 								backgroundColor: 'rgb(255, 99, 132)',
 								borderColor: 'rgb(255, 99, 132)',
-								data: [${newData.map((dataPoint) => dataPoint.keys)}]
+								data: JSON.parse(\`${JSON.stringify(newData)}\`)
 							}]
 						},
 
@@ -155,6 +167,10 @@ function setupWebview(context, panel) {
 							},
 							scales: {
 								xAxes: [ {
+                                    type: "time",
+                                    time: {
+                                        unit: 'day'
+                                    },
 									display: true,
 									scaleLabel: {
 										display: true,
