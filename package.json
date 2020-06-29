@@ -3,7 +3,7 @@
     "displayName": "Productivity Tracker",
     "publisher": "JustinFernald",
     "description": "Extension that tracks how much you are trying for given intervals and gives summary on the data.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "engines": {
         "vscode": "^1.46.0"
     },
